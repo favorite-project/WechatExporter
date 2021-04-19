@@ -14,6 +14,7 @@
 #include <map>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <libxml/HTMLtree.h>
 #include <libxml/xpath.h>
 
 class XmlParser;
@@ -91,6 +92,8 @@ public:
     template <class TNodeHandler>
     bool parseWithHandler(const std::string& xpath, TNodeHandler& handler) const;
     xmlXPathObjectPtr evalXPathOnNode(xmlNodePtr node, const std::string& xpath);
+    
+    bool dumpToFile(const std::string& outputPath);
     
 private:
     xmlDocPtr m_doc;

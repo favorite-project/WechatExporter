@@ -7,6 +7,7 @@
 //
 
 #include "XmlParser.h"
+#include "FileSystem.h"
 
 struct NodeValueHandler
 {
@@ -234,4 +235,26 @@ bool XmlParser::parseAttributesValue(const std::string& xpath, std::map<std::str
 {
     AttributesHandler handler = {attributes};
     return parseWithHandler(xpath, handler);
+}
+
+bool XmlParser::dumpToFile(const std::string& outputPath)
+{
+    if (NULL == m_doc)
+    {
+        return false;
+    }
+    
+    xmlChar *buffer = NULL;
+    int bufferSize = 0;
+    htmlDocDumpMemoryFormat(m_doc, &buffer, &bufferSize, 1);
+    if (NULL != buffer && bufferSize > 0)
+    {
+        return writeFile(outputPath, reinterpret_cast<const unsigned char *>(buffer), static_cast<size_t>(bufferSize));
+    }
+    if (NULL != buffer)
+    {
+        xmlFree(buffer);
+    }
+    
+    return false;
 }
