@@ -52,6 +52,10 @@ bool MessageParser::parse(WXMSG& msg, const Session& session, std::vector<Templa
 #ifndef NDEBUG
     writeFile(combinePath(m_outputPath, "../dbg", "msg" + std::to_string(msg.type) + ".txt"), msg.content);
 #endif
+    ensureDirectoryExisted(combinePath(m_outputPath, "../dbg"));
+    writeFile(combinePath(m_outputPath, "../dbg", "lastmsgid.txt"), msg.msgId);
+    writeFile(combinePath(m_outputPath, "../dbg", "lastmsgcontent.txt"), msg.content);
+    writeFile(combinePath(m_outputPath, "../dbg", "lastmsgtype.txt"), std::to_string(msg.type));
     
     switch (msg.type)
     {
@@ -388,6 +392,8 @@ void MessageParser::parseAppMsg(const WXMSG& msg, const Session& session, std::s
         xmlParser.parseNodeValue("/msg/fromusername", senderId);
     }
     
+    xmlParser.dumpToFile(combinePath(m_outputPath, "../dbg", "lastappmsg.xml"));
+    
     std::string appMsgTypeStr;
     if (!xmlParser.parseNodeValue("/msg/appmsg/type", appMsgTypeStr))
     {
@@ -520,6 +526,9 @@ void MessageParser::parseLocation(const WXMSG& msg, const Session& session, Temp
     std::map<std::string, std::string> attrs = { {"x", ""}, {"y", ""}, {"label", ""}, {"poiname", ""} };
     
     XmlParser xmlParser(msg.content);
+    
+    xmlParser.dumpToFile(combinePath(m_outputPath, "../dbg", "lastlocation.xml"));
+    
     xmlParser.parseAttributesValue("/msg/location", attrs);
     
     std::string location = (!attrs["poiname"].empty() && !attrs["label"].empty()) ? (attrs["poiname"] + " - " + attrs["label"]) : (attrs["poiname"] + attrs["label"]);
