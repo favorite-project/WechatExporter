@@ -47,7 +47,7 @@ public:
     
     void setUserAgent(const std::string& userAgent);
     
-    size_t getNumberOfQueue() const;
+    size_t getNumberOfQueue(std::string& queueDesc) const;
     void cancel();
     void shutdown();
 

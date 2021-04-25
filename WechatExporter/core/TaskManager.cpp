@@ -12,8 +12,9 @@
 
 TaskManager::TaskManager(bool needPdfExecutor, Logger* logger) : m_logger(logger), m_downloadExecutor(NULL), m_audioExecutor(NULL), m_pdfExecutor(NULL)
 {
-    m_downloadExecutor = new AsyncExecutor(4, 8, this);
-    m_audioExecutor = new AsyncExecutor(2, 4, this);
+    m_downloadExecutor = new AsyncExecutor(2, 4, this);
+    m_audioExecutor = new AsyncExecutor(1, 1, this);
+    // m_audioExecutor = m_downloadExecutor;
     if (needPdfExecutor)
     {
         m_pdfExecutor = new AsyncExecutor(4, 4, this);
@@ -91,17 +92,41 @@ void TaskManager::cancel()
     pdfTaskQueue.clear();
 }
 
-size_t TaskManager::getNumberOfQueue() const
+size_t TaskManager::getNumberOfQueue(std::string& queueDesc) const
 {
-    size_t size = m_downloadExecutor->getNumberOfQueue();
-    size += m_audioExecutor->getNumberOfQueue();
-    size += m_pdfTaskQueue.size();
+    size_t numberOfDownloads = m_downloadExecutor->getNumberOfQueue();
+    size_t numberOfAudio = m_audioExecutor->getNumberOfQueue();
+    size_t numberOfPdf = m_pdfTaskQueue.size();
     
-    std::unique_lock<std::mutex> lock(m_mutex);
-    size += m_copyTaskQueue.size();
-    size += m_pdfTaskQueue.size();
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        numberOfDownloads += m_copyTaskQueue.size();
+        numberOfPdf += m_pdfTaskQueue.size();
+    }
     
-    return size;
+    queueDesc = "";
+    if (numberOfDownloads > 0)
+    {
+        queueDesc += std::to_string(numberOfDownloads) + " downloads";
+    }
+    if (numberOfAudio > 0)
+    {
+        if (!queueDesc.empty())
+        {
+            queueDesc += ", ";
+        }
+        queueDesc += std::to_string(numberOfAudio) + " audios";
+    }
+    if (numberOfPdf > 0)
+    {
+        if (!queueDesc.empty())
+        {
+            queueDesc += ", ";
+        }
+        queueDesc = std::to_string(numberOfPdf) + " pdf files";
+    }
+    
+    return numberOfDownloads + numberOfAudio + numberOfPdf;
 }
 
 void TaskManager::shutdownExecutors()
@@ -111,7 +136,7 @@ void TaskManager::shutdownExecutors()
         delete m_pdfExecutor;
         m_pdfExecutor = NULL;
     }
-    if (NULL != m_audioExecutor)
+    if (NULL != m_audioExecutor && m_audioExecutor != m_downloadExecutor)
     {
         delete m_audioExecutor;
         m_audioExecutor = NULL;
@@ -130,7 +155,7 @@ void TaskManager::setUserAgent(const std::string& userAgent)
 
 void TaskManager::onTaskStart(const AsyncExecutor* executor, const AsyncExecutor::Task *task)
 {
-    if (NULL != m_logger && task->getType() != TASK_TYPE_MP3)
+    if (NULL != m_logger && task->getType() != TASK_TYPE_AUDIO)
     {
         if (task->getType() == TASK_TYPE_PDF)
         {
@@ -163,7 +188,7 @@ void TaskManager::onTaskComplete(const AsyncExecutor* executor, const AsyncExecu
     }
     
     const Session* session = task->getUserData() == NULL ? NULL : reinterpret_cast<const Session *>(task->getUserData());
-    if (executor == m_downloadExecutor && task->getType() == TASK_TYPE_DOWNLOAD)
+    if (/*executor == m_downloadExecutor && */task->getType() == TASK_TYPE_DOWNLOAD)
     {
         const DownloadTask* downloadTask = dynamic_cast<const DownloadTask *>(task);
         
@@ -200,7 +225,7 @@ void TaskManager::onTaskComplete(const AsyncExecutor* executor, const AsyncExecu
             m_pdfExecutor->addTask(pdfTask);
         }
     }
-    else if (((executor == m_downloadExecutor) && (task->getType() == TASK_TYPE_COPY)) || executor == m_audioExecutor)
+    else if ((task->getType() == TASK_TYPE_COPY) || (task->getType() == TASK_TYPE_AUDIO))
     {
         // check copy task
         AsyncExecutor::Task *pdfTask = NULL;

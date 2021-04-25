@@ -522,13 +522,19 @@ bool Exporter::exportUser(Friend& user, std::string& userOutputPath)
     {
 #ifdef USING_DOWNLOADER
         int dlCount = downloader.getRunningCount();
-#else
-        size_t dlCount = taskManager.getNumberOfQueue();
-#endif
         if (dlCount > 0)
         {
             m_logger->write(formatString(getLocaleString("Waiting for images(%d) downloading."), dlCount));
         }
+#else
+        std::string queueDesc;
+        size_t dlCount = taskManager.getNumberOfQueue(queueDesc);
+        if (dlCount > 0)
+        {
+            m_logger->write("Waiting for: " + queueDesc);
+        }
+#endif
+        
     }
     
 #ifdef USING_DOWNLOADER
